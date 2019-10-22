@@ -1,0 +1,107 @@
+<meta charset="utf8" />
+<html>
+<script src='../dist/sql-wasm-debug.js'></script>
+<script src='./sqLiteRepository.js'></script>
+<script>
+  config = {
+    locateFile: (filename, prefix) => {
+      console.log(`prefix is : ${prefix}`);
+      return `../dist/${filename}`;
+    }
+  }
+  // The `initSqlJs` function is globally provided by all of the main dist files if loaded in the browser.
+  // We must specify this locateFile function if we are loading a wasm file from anywhere other than the current html page's folder.
+  initSqlJs(config).then(function (SQL) {
+    
+    RunRepo();
+
+
+
+    /*
+    // Run a query without reading the results
+    db.run("CREATE TABLE test (col1, col2);");
+    // Insert two rows: (1,111) and (2,222)
+    db.run("INSERT INTO test VALUES (?,?), (?,?)", [1, 111, 2, 222]);
+
+    // Prepare a statement
+    var stmt = db.prepare("SELECT * FROM test WHERE col1 BETWEEN $start AND $end");
+    stmt.getAsObject({ $start: 1, $end: 1 }); // {col1:1, col2:111}
+
+    // Bind new values
+    stmt.bind({ $start: 1, $end: 2 });
+    while (stmt.step()) { //
+      var row = stmt.getAsObject();
+      console.log('Here is a row: ' + JSON.stringify(row));
+    }*/
+  });
+
+  function RunRepo() {
+    const employeeDef = {
+    tableName: 'Employee',
+    fields:
+        [
+          { fieldName: 'Id', dataType: 'Integer' },
+          { fieldName: 'FirstName', dataType: 'Varchar(50)' },
+          { fieldName: 'LastName', dataType: 'Varchar(50)' },
+          { fieldName: 'CompanyId', dataType: 'Integer' }
+        ]
+    }
+
+    const CompanyDef = {
+        tableName: 'Company',
+        fields:
+            [
+            { fieldName: 'Id', dataType: 'Integer' },
+            { fieldName: 'CompanyName', dataType: 'Varchar(50)' }
+            ]
+    }
+
+    console.log('Create the database');
+    var db = new SQL.Database();
+
+    let repositoryFactory = getRepositoryFactory(db)
+    let employeeRepository = repositoryFactory(employeeDef.fields, employeeDef.tableName)
+    let companyRepository = repositoryFactory(CompanyDef.fields, CompanyDef.tableName)
+    //companyRepository.displayQueries()
+    //employeeRepository.displayQueries()
+
+    companyRepository.create()
+    employeeRepository.create()
+    console.log('Created database');
+
+    console.log('Insert');
+    let newCompany = companyRepository.insert({ CompanyName: 'Sotra Tepperens og VideoUtleie' })
+    let newCompany2 = companyRepository.insert({ CompanyName: 'BareSpanken Vest' })
+    console.log('newCompany:', newCompany);
+
+    console.table(companyRepository.selectAll())
+   
+    let newEmpA1 = employeeRepository.insert({ Id: 10, CompanyId: newCompany.Id })
+    console.log(`newEmp01 created: `, newEmpA1)
+
+    console.log('Test update');
+    let newEmpA2 = employeeRepository.selectById(newEmpA1.Id)
+    console.log(`newEmpR retrieved: `, newEmpA2)
+    employeeRepository.update({ ...newEmpA1, FirstName: 'Sherlock', LastName: 'Holmes' })
+    let newEmpA3 = employeeRepository.selectById(newEmpA1.Id)
+    console.log(`newEmpR2 updated: `, newEmpA3)
+
+    console.table(employeeRepository.selectAll())
+
+    console.log('Test delete');
+    employeeRepository.delete(newEmpA1.Id)
+    let deletedEmp = employeeRepository.selectById(newEmpA1.Id)
+    if (deletedEmp === undefined) console.log(`Record Id ${newEmpA1.Id} no longer exists..`)
+
+    console.log('Test select where in list');
+    let inItems = employeeRepository.selectWhereIn([1, 2, 54, 55, 56])
+    console.log(`inItems: `, inItems)
+    
+  }
+</script>
+
+<body>
+  Output is in Javscript console
+</body>
+
+</html>
